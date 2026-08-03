@@ -27,7 +27,7 @@ This repository contains extension catalogues which are compatible with [Komikku
 * Otherwise, copy & paste the following URL:
 
 ```html
-https://raw.githubusercontent.com/yuzono/cursed-manga-repo/repo/index.min.json
+https://github.com/yuzono/cursed-manga-repo/raw/repo/index.pb
 ```
 
 ## Requests
