@@ -14,6 +14,7 @@ internal fun Project.configureKotlin() {
     kotlin {
         compilerOptions {
             optIn.add("kotlinx.serialization.ExperimentalSerializationApi")
+            freeCompilerArgs.add("-Xcontext-parameters")
         }
     }
 }
