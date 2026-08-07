@@ -118,10 +118,11 @@ all_extensions.sort(key=lambda ext: ext.packageName)
 
 index = index_pb2.Index(
     name="Cursed Yūzōnō",
-        badgeLabel="Cursed",
-        signingKey="a5e2027162d4b7294d54fd069af923eee4078cc097765d3a0d84a747d3a8356e",
-        contact=index_pb2.Contact(
-            website="https://yuzono.github.io", discord="https://discord.gg/85MZhUX688"
+    badgeLabel="Cursed",
+    signingKey="a5e2027162d4b7294d54fd069af923eee4078cc097765d3a0d84a747d3a8356e",
+    contact=index_pb2.Contact(
+        website="https://devil6venom.github.io/cursed-repo",
+        discord="https://discord.gg/85MZhUX688"
     ),
     extensionList=index_pb2.ExtensionList(extensions=all_extensions),
 )
@@ -132,6 +133,16 @@ with REPO_DIR.joinpath("index.json").open("w", encoding="utf-8") as f:
             index,
             always_print_fields_with_no_presence=False,
             preserving_proto_field_name=True,
+        )
+    )
+
+with REPO_DIR.joinpath("index.min.json").open("w", encoding="utf-8") as f:
+    f.write(
+        json_format.MessageToJson(
+            index,
+            always_print_fields_with_no_presence=False,
+            preserving_proto_field_name=True,
+            indent=None,
         )
     )
 

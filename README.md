@@ -21,13 +21,13 @@ This repository contains extension catalogues which are compatible with [Komikku
 
 ## How to add the repo
 
-**Extensions list:** [devil6venom's cursed manga](https://devil6venom.github.io/cursed-manga-extensions/extensions/)
+**Extensions list:** [devil6venom's cursed manga](https://devil6venom.github.io/cursed-repo/)
 
-* You can add our repo by visiting the Website
+* You can add our repo by visiting the [Website](https://devil6venom.github.io/cursed-repo/)
 * Otherwise, copy & paste the following URL:
 
 ```html
-https://github.com/devil6venom/cursed-repo/raw/repo/index.pb
+https://raw.githubusercontent.com/devil6venom/cursed-repo/repo/index.min.json
 ```
 
 ## Requests
