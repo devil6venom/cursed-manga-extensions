@@ -2,7 +2,7 @@
 
 | Install to app | Build | Discord |
 |:--------------:|:-----:|:-------:|
-| [![Install](https://img.shields.io/badge/Click%20here%20to%20install%20repo-gray?style=flat&labelColor=red)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/yuzono/cursed-manga-repo/repo/index.min.json) | [![Build](https://github.com/yuzono/cursed-manga-extensions/actions/workflows/build_push.yml/badge.svg)](https://github.com/yuzono/cursed-manga-extensions/actions/workflows/build_push.yml) | [![Discord](https://img.shields.io/discord/1377136877491982366.svg?label=&labelColor=6A7EC2&color=7389D8&logo=discord&logoColor=FFFFFF)](https://discord.gg/85MZhUX688) |
+| [![Install](https://img.shields.io/badge/Click%20here%20to%20install%20repo-gray?style=flat&labelColor=red)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/devil6venom/cursed-manga-repo/repo/index.min.json) | [![Build](https://github.com/devil6venom/cursed-manga-extensions/actions/workflows/build_push.yml/badge.svg)](https://github.com/devil6venom/cursed-manga-extensions/actions/workflows/build_push.yml) | [![Discord](https://img.shields.io/discord/1377136877491982366.svg?label=&labelColor=6A7EC2&color=7389D8&logo=discord&logoColor=FFFFFF)](https://discord.gg/85MZhUX688) |
 
 [![Sponsor me on GitHub](https://custom-icon-badges.demolab.com/badge/-Sponsor-ea4aaa?style=for-the-badge&logo=heart&logoColor=white)](https://github.com/sponsors/cuong-tran "Sponsor me on GitHub")
 
@@ -21,13 +21,13 @@ This repository contains extension catalogues which are compatible with [Komikku
 
 ## How to add the repo
 
-**Extensions list:** [Yūzōnō's cursed manga](https://yuzono.github.io/cursed-manga-extensions/extensions/)
+**Extensions list:** [devil6venom's cursed manga](https://devil6venom.github.io/cursed-manga-extensions/extensions/)
 
-* You can add our repo by visiting the [Yūzōnō Website](https://yuzono.github.io/cursed-manga-extensions/)
+* You can add our repo by visiting the Website
 * Otherwise, copy & paste the following URL:
 
 ```html
-https://github.com/yuzono/cursed-manga-repo/raw/repo/index.pb
+https://github.com/devil6venom/cursed-manga-repo/raw/repo/index.pb
 ```
 
 ## Requests

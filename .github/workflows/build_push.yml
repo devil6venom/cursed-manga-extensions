@@ -98,7 +98,7 @@ jobs:
 
       - name: Upload APKs (${{ matrix.chunk.number }})
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: github.repository == 'yuzono/cursed-manga-extensions'
+        if: github.repository == 'devil6venom/cursed-manga-extensions'
         with:
           name: "individual-apks-${{ matrix.chunk.number }}"
           path: |
@@ -117,7 +117,7 @@ jobs:
     # Run whenever there's anything to publish, new/changed builds OR only deletions
     if: >-
       always() &&
-      github.repository == 'yuzono/cursed-manga-extensions' &&
+      github.repository == 'devil6venom/cursed-manga-extensions' &&
       needs.prepare.result == 'success' &&
       needs.build.result != 'failure' &&
       needs.build.result != 'cancelled' &&
@@ -141,7 +141,7 @@ jobs:
       - name: Checkout repo branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: yuzono/cursed-manga-repo
+          repository: devil6venom/cursed-manga-repo
           token: ${{ secrets.BOT_PAT }}
           ref: repo
           path: repo
@@ -167,6 +167,6 @@ jobs:
 
       - name: Purge cached index on jsDelivr
         run: |
-          curl https://purge.jsdelivr.net/gh/yuzono/cursed-manga-repo@repo/index.min.json
-          curl https://purge.jsdelivr.net/gh/yuzono/cursed-manga-repo@repo/index.json
-          curl https://purge.jsdelivr.net/gh/yuzono/cursed-manga-repo@repo/index.pb
+          curl https://purge.jsdelivr.net/gh/devil6venom/cursed-manga-repo@repo/index.min.json
+          curl https://purge.jsdelivr.net/gh/devil6venom/cursed-manga-repo@repo/index.json
+          curl https://purge.jsdelivr.net/gh/devil6venom/cursed-manga-repo@repo/index.pb
