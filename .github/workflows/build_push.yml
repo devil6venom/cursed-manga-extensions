@@ -141,7 +141,7 @@ jobs:
       - name: Checkout repo branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: devil6venom/cursed-manga-repo
+          repository: devil6venom/cursed-repo
           token: ${{ secrets.BOT_PAT }}
           ref: repo
           path: repo
@@ -167,6 +167,6 @@ jobs:
 
       - name: Purge cached index on jsDelivr
         run: |
-          curl https://purge.jsdelivr.net/gh/devil6venom/cursed-manga-repo@repo/index.min.json
-          curl https://purge.jsdelivr.net/gh/devil6venom/cursed-manga-repo@repo/index.json
-          curl https://purge.jsdelivr.net/gh/devil6venom/cursed-manga-repo@repo/index.pb
+          curl https://purge.jsdelivr.net/gh/devil6venom/cursed-repo@repo/index.min.json
+          curl https://purge.jsdelivr.net/gh/devil6venom/cursed-repo@repo/index.json
+          curl https://purge.jsdelivr.net/gh/devil6venom/cursed-repo@repo/index.pb
