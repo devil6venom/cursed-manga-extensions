@@ -121,7 +121,7 @@ jobs:
       needs.prepare.result == 'success' &&
       needs.build.result != 'failure' &&
       needs.build.result != 'cancelled' &&
-      needs.prepare.outputs.delete != '[]'
+      (needs.build.result == 'success' || needs.prepare.outputs.delete != '[]')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

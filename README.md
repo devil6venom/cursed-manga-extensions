@@ -27,7 +27,7 @@ This repository contains extension catalogues which are compatible with [Komikku
 * Otherwise, copy & paste the following URL:
 
 ```html
-https://raw.githubusercontent.com/devil6venom/cursed-repo/repo/index.min.json
+https://raw.githubusercontent.com/devil6venom/cursed-repo/repo/index.pb
 ```
 
 ## Requests
