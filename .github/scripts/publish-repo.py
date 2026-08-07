@@ -19,9 +19,9 @@ REPO_JAR_DIR = REPO_DIR / "jar"
 REPO_APK_DIR.mkdir(parents=True, exist_ok=True)
 REPO_JAR_DIR.mkdir(parents=True, exist_ok=True)
 
-APK_BASE_URL = "https://cdn.jsdelivr.net/gh/yuzono/cursed-manga-repo@repo/apk"
-JAR_BASE_URL = "https://raw.githubusercontent.com/yuzono/cursed-manga-repo/repo/jar"
-ICON_BASE_URL = "https://cdn.jsdelivr.net/gh/yuzono/cursed-manga-extensions@master"
+APK_BASE_URL = "https://cdn.jsdelivr.net/gh/devil6venom/cursed-repo@repo/apk"
+JAR_BASE_URL = "https://raw.githubusercontent.com/devil6venom/cursed-repo/repo/jar"
+ICON_BASE_URL = "https://cdn.jsdelivr.net/gh/devil6venom/cursed-manga-extensions@master"
 
 to_delete: list[str] = json.loads(sys.argv[1])
 
@@ -101,14 +101,18 @@ for info_file in ARTIFACTS_DIR.glob("**/keiyoushi-source-info.json"):
     )
 
 # Merge with the already-published index, dropping the deleted/rebuilt modules.
-with REPO_DIR.joinpath("index.json").open() as f:
-    remote_proto = json_format.Parse(f.read(), index_pb2.Index())
+index_file = REPO_DIR.joinpath("index.json")
+if index_file.exists():
+    with index_file.open(encoding="utf-8") as f:
+        remote_proto = json_format.Parse(f.read(), index_pb2.Index())
+    all_extensions = [
+        ext
+        for ext in remote_proto.extensionList.extensions
+        if not any(ext.packageName.endswith(f".{module}") for module in to_delete)
+    ]
+else:
+    all_extensions = []
 
-all_extensions = [
-    ext
-    for ext in remote_proto.extensionList.extensions
-    if not any(ext.packageName.endswith(f".{module}") for module in to_delete)
-]
 all_extensions.extend(new_extensions)
 all_extensions.sort(key=lambda ext: ext.packageName)
 
