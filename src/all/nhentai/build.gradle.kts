@@ -8,7 +8,7 @@ keiyoushi {
     name = "NHentai"
     versionCode = 62
     contentWarning = ContentWarning.NSFW
-    libVersion = "1.4"
+    libVersion = "1.6"
 
     listOf("all", "en", "ja", "zh").forEach { sourceLang ->
         source {

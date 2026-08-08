@@ -12,7 +12,6 @@ import eu.kanade.tachiyomi.extension.all.nhentai.NHUtils.getGroups
 import eu.kanade.tachiyomi.extension.all.nhentai.NHUtils.getTagDescription
 import eu.kanade.tachiyomi.extension.all.nhentai.NHUtils.getTags
 import eu.kanade.tachiyomi.network.GET
-import eu.kanade.tachiyomi.network.asObservableSuccess
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
@@ -20,39 +19,33 @@ import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.source.model.SMangaUpdate
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
-import eu.kanade.tachiyomi.source.online.HttpSource
 import keiyoushi.annotation.Source
 import keiyoushi.lib.randomua.addRandomUAPreference
 import keiyoushi.lib.randomua.setRandomUserAgent
+import keiyoushi.network.get
 import keiyoushi.network.rateLimit
+import keiyoushi.source.KeiSource
 import keiyoushi.utils.firstInstanceOrNull
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import okhttp3.Cache
-import okhttp3.CacheControl
+import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.Response
-import rx.Observable
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
 import java.io.File
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 
 @Source
-class NHentai(
-    override val name: String,
-    override val lang: String,
-    override val baseUrl: String,
-    override val id: Long,
-) : HttpSource(),
+abstract class NHentai :
+    KeiSource(),
     ConfigurableSource {
 
     private val nhLang: String by lazy {
@@ -70,13 +63,11 @@ class NHentai(
 
     override val supportsLatest = true
 
-    private val json: Json by injectLazy()
-
     private val preferences: SharedPreferences by getPreferencesLazy()
 
     private val webViewCookieManager: CookieManager by lazy { CookieManager.getInstance() }
 
-    override val client: OkHttpClient by lazy {
+    override fun OkHttpClient.Builder.configureClient(): OkHttpClient.Builder {
         val (permits, period) = preferences.parseRateLimit()
 
         val app = Injekt.get<Application>()
@@ -86,7 +77,7 @@ class NHentai(
             ?: app.filesDir
         val cacheDirectory = File(cacheParent, "nhentai_api_cache_$lang")
 
-        network.client.newBuilder()
+        return this
             .cache(
                 Cache(
                     directory = cacheDirectory,
@@ -97,10 +88,9 @@ class NHentai(
             .addNetworkInterceptor(NhGalleryCacheInterceptor())
             .addNetworkInterceptor(NhAuthorizationInterceptor())
             .rateLimit(permits, period.seconds) { it.host == baseUrlHost }
-            .build()
     }
 
-    override fun headersBuilder() = super.headersBuilder()
+    override fun Headers.Builder.configureHeaders(): Headers.Builder = this
         .setRandomUserAgent(
             filterInclude = listOf("chrome"),
         )
@@ -119,7 +109,7 @@ class NHentai(
 
     val nhConfig: NHConfig by lazy {
         try {
-            client.newCall(GET("$apiUrl/config", headers)).execute().parseAs<NHConfig>(json)
+            client.newCall(GET("$apiUrl/config", headers)).execute().parseAs<NHConfig>()
         } catch (_: Exception) {
             NHConfig(
                 (1..4).map { n -> "https://i$n.nhentai.net" }.toList(),
@@ -196,7 +186,7 @@ class NHentai(
 
     // Latest
 
-    override fun latestUpdatesRequest(page: Int): Request {
+    override suspend fun getLatestUpdates(page: Int): MangasPage {
         val url = if (nhLang.isBlank()) {
             "$apiUrl/galleries".toHttpUrl().newBuilder()
         } else {
@@ -204,27 +194,26 @@ class NHentai(
                 .addQueryParameter("query", "language:$nhLang")
         }
         url.addQueryParameter("page", page.toString())
-        return GET(url.build(), headers)
+        val response = client.get(url.build(), headers)
+        return mangaListParse(response)
     }
-
-    override fun latestUpdatesParse(response: Response): MangasPage = searchMangaParse(response)
 
     // Popular
 
-    override fun popularMangaRequest(page: Int): Request {
+    override suspend fun getPopularManga(page: Int): MangasPage {
         val url = "$apiUrl/search".toHttpUrl().newBuilder()
             .addQueryParameter("query", if (nhLang.isBlank()) "\"\"" else "language:$nhLang")
             .addQueryParameter("sort", "popular")
             .addQueryParameter("page", page.toString())
-        return GET(url.build(), headers)
+            .build()
+        val response = client.get(url, headers)
+        return mangaListParse(response)
     }
-
-    override fun popularMangaParse(response: Response): MangasPage = searchMangaParse(response)
 
     // Search
 
-    override fun fetchSearchManga(page: Int, query: String, filters: FilterList): Observable<MangasPage> = when {
-        query.startsWith("https://") -> {
+    override suspend fun getSearchMangaList(page: Int, query: String, filters: FilterList): MangasPage {
+        if (query.startsWith("https://")) {
             val url = query.toHttpUrl()
             if (url.host != baseUrl.toHttpUrl().host) {
                 throw Exception("Unsupported url")
@@ -232,23 +221,21 @@ class NHentai(
             if (url.pathSegments.size < 2) {
                 throw Exception("Unsupported url")
             }
-            fetchSearchManga(page, "$PREFIX_ID_SEARCH${url.pathSegments[1]}", filters)
+            return getSearchMangaList(page, "$PREFIX_ID_SEARCH${url.pathSegments[1]}", filters)
         }
-        query.startsWith(PREFIX_ID_SEARCH) -> {
+
+        if (query.startsWith(PREFIX_ID_SEARCH)) {
             val id = query.removePrefix(PREFIX_ID_SEARCH)
-            client.newCall(searchMangaByIdRequest(id)).asObservableSuccess()
-                .map { searchMangaByIdParse(it) }
+            val response = client.get("$apiUrl/galleries/$id", headers)
+            return mangaByIdParse(response)
         }
 
-        query.toIntOrNull() != null -> {
-            client.newCall(searchMangaByIdRequest(query)).asObservableSuccess()
-                .map { searchMangaByIdParse(it) }
+        val idQuery = query.toIntOrNull()
+        if (idQuery != null) {
+            val response = client.get("$apiUrl/galleries/$idQuery", headers)
+            return mangaByIdParse(response)
         }
 
-        else -> super.fetchSearchManga(page, query, filters)
-    }
-
-    override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         val filterList = if (filters.isEmpty()) getFilterList() else filters
         val nhLangSearch = if (nhLang.isBlank()) "" else "language:$nhLang "
         val advQuery = combineQuery(filterList)
@@ -256,23 +243,23 @@ class NHentai(
         val offsetPage =
             filterList.firstInstanceOrNull<OffsetPageFilter>()?.state?.toIntOrNull()?.plus(page) ?: page
 
-        if (favoriteFilter?.state == true) {
-            val url = "$apiUrl/favorites".toHttpUrl().newBuilder()
+        val urlBuilder = if (favoriteFilter?.state == true) {
+            "$apiUrl/favorites".toHttpUrl().newBuilder()
                 .addQueryParameter("q", "$query $advQuery")
-                .addQueryParameter("page", offsetPage.toString())
-            return GET(url.build(), headers)
         } else {
-            val url = "$apiUrl/search".toHttpUrl().newBuilder()
-                // Blank query (Multi + sort by popular month/week/day) shows a 404 page
-                // Searching for `""` is a hacky way to return everything without any filtering
+            "$apiUrl/search".toHttpUrl().newBuilder()
                 .addQueryParameter("query", "$query $nhLangSearch$advQuery".ifBlank { "\"\"" })
-                .addQueryParameter("page", offsetPage.toString())
-
-            filterList.firstInstanceOrNull<SortFilter>()?.let { f ->
-                url.addQueryParameter("sort", f.toUriPart())
-            }
-            return GET(url.build(), headers)
         }
+        urlBuilder.addQueryParameter("page", offsetPage.toString())
+
+        if (favoriteFilter?.state != true) {
+            filterList.firstInstanceOrNull<SortFilter>()?.let { f ->
+                urlBuilder.addQueryParameter("sort", f.toUriPart())
+            }
+        }
+
+        val response = client.get(urlBuilder.build(), headers)
+        return mangaListParse(response)
     }
 
     private fun combineQuery(filters: FilterList): String = buildString {
@@ -292,15 +279,13 @@ class NHentai(
         }
     }
 
-    private fun searchMangaByIdRequest(id: String) = GET("$apiUrl/galleries/$id", headers)
-
-    private fun searchMangaByIdParse(response: Response): MangasPage {
-        val details = mangaDetailsParse(response)
+    private fun mangaByIdParse(response: Response): MangasPage {
+        val details = mangaDetailsParseInternal(response)
         return MangasPage(listOf(details), false)
     }
 
-    override fun searchMangaParse(response: Response): MangasPage {
-        val res = response.parseAs<PaginatedResponse<GalleryItem>>(json)
+    private fun mangaListParse(response: Response): MangasPage {
+        val res = response.parseAs<PaginatedResponse<GalleryItem>>()
         val mangas = res.result.mapNotNull { runCatching { parseSearchData(it) }.getOrNull() }
         val page = response.request.url.queryParameter("page")?.toIntOrNull() ?: 1
         val hasNextPage =
@@ -318,14 +303,58 @@ class NHentai(
         update_strategy = UpdateStrategy.ONLY_FETCH_ONCE
     }
 
-    // Manga
+    // Details & Chapters
 
     override fun getMangaUrl(manga: SManga) = "$baseUrl${manga.url}"
 
-    override fun mangaDetailsRequest(manga: SManga): Request = searchMangaByIdRequest(manga.url.removeSurrounding("/g/", "/"))
+    override suspend fun fetchMangaUpdate(
+        manga: SManga,
+        chapters: List<SChapter>,
+        fetchDetails: Boolean,
+        fetchChapters: Boolean,
+    ): SMangaUpdate {
+        val id = manga.url.removeSurrounding("/g/", "/")
+        val response = client.get("$apiUrl/galleries/$id", headers)
+        val data = response.parseAs<Hentai>()
 
-    override fun mangaDetailsParse(response: Response): SManga {
-        val data = response.parseAs<Hentai>(json)
+        val updatedManga = if (fetchDetails) {
+            SManga.create().apply {
+                url = "/g/${data.id}/"
+                title = if (displayFullTitle) {
+                    data.title.english ?: data.title.japanese ?: data.title.pretty!!
+                } else {
+                    data.title.pretty ?: (data.title.english ?: data.title.japanese)!!.shortenTitle()
+                }
+                thumbnail_url = "$thumbServer/${data.thumbnail.path}"
+                status = SManga.COMPLETED
+                artist = getArtists(data)
+                author = getGroups(data) ?: getArtists(data)
+                description = "Full English and Japanese titles:\n"
+                    .plus("${data.title.english ?: data.title.japanese ?: data.title.pretty ?: ""}\n")
+                    .plus(data.title.japanese ?: "")
+                    .plus("\n\n")
+                    .plus("Pages: ${data.numPages}\n")
+                    .plus("Favorited by: ${data.numFavorites}\n")
+                    .plus(getTagDescription(data))
+                genre = getTags(data)
+                update_strategy = UpdateStrategy.ONLY_FETCH_ONCE
+                initialized = true
+            }
+        } else {
+            manga
+        }
+
+        val updatedChapters = if (fetchChapters) {
+            listOf(data.toSChapter())
+        } else {
+            chapters
+        }
+
+        return SMangaUpdate(updatedManga, updatedChapters)
+    }
+
+    private fun mangaDetailsParseInternal(response: Response): SManga {
+        val data = response.parseAs<Hentai>()
 
         return SManga.create().apply {
             url = "/g/${data.id}/"
@@ -338,7 +367,6 @@ class NHentai(
             status = SManga.COMPLETED
             artist = getArtists(data)
             author = getGroups(data) ?: getArtists(data)
-            // Some people want these additional details in description
             description = "Full English and Japanese titles:\n"
                 .plus("${data.title.english ?: data.title.japanese ?: data.title.pretty ?: ""}\n")
                 .plus(data.title.japanese ?: "")
@@ -352,35 +380,19 @@ class NHentai(
         }
     }
 
-    // Chapter List
-
-    override fun chapterListRequest(manga: SManga): Request = mangaDetailsRequest(manga).newBuilder()
-        .cacheControl(CacheControl.Builder().maxStale(2, TimeUnit.HOURS).build())
-        .build()
-
-    override fun chapterListParse(response: Response): List<SChapter> {
-        val data = response.parseAs<Hentai>(json)
-        return listOf(data.toSChapter())
-    }
-
     // Pages
 
-    override fun pageListRequest(chapter: SChapter): Request {
+    override suspend fun getPageList(chapter: SChapter): List<Page> {
         val id = chapter.url.removeSurrounding("/g/", "/")
-        return GET("$apiUrl/galleries/$id", headers)
-    }
-
-    override fun pageListParse(response: Response): List<Page> {
-        val data = response.parseAs<Hentai>(json)
+        val response = client.get("$apiUrl/galleries/$id", headers)
+        val data = response.parseAs<Hentai>()
         return data.pages.mapIndexed { i, page ->
             Page(i, imageUrl = "$imageServer/${page.path}")
         }
     }
 
-    override fun imageUrlParse(response: Response) = throw UnsupportedOperationException()
-
     // Filters
-    override fun getFilterList(): FilterList = FilterList(
+    override fun getFilterList(data: JsonElement?): FilterList = FilterList(
         Filter.Header("Separate tags with commas (,)"),
         Filter.Header("Prepend with dash (-) to exclude"),
         TagFilter(),
